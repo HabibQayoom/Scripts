@@ -1,0 +1,17 @@
+[Unit]
+Description=AIOS Alert Manager
+After=network.target
+
+[Service]
+Type=simple
+# Change User and paths to match your deployment
+User=iai-dev
+WorkingDirectory=/home/iai-dev/aios-alerts
+# Pick the edition you want to run:
+ExecStart=/usr/bin/python3 /home/iai-dev/aios-alerts/src/aios-application-alerts-azure.py
+# ExecStart=/usr/bin/python3 /home/iai-dev/aios-alerts/src/aios-application-alerts-loki.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
