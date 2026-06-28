@@ -13,6 +13,29 @@ Both editions share identical Slack, UI, silencing, grouping, and reporting logi
 
 ---
 
+## Why a custom script instead of Grafana built-in alerting?
+
+Grafana Cloud has its own alerting engine, and we evaluated it first. It works well for *metric threshold* alerts ("CPU > 80%", "error count > 100 in 5 min"), but it could not do what we actually needed for **per-error log alerting**. The gaps:
+
+1. **Grafana alerts on aggregates, not individual log lines.** Its log alerting fires when a *count* crosses a threshold — it can tell you "there were 50 errors", but it cannot send you the **actual text of each distinct error**. We need the real error message in Slack, not just a number.
+
+2. **Grafana always deduplicates by alert rule, not by error content.** One alert rule = one firing state. It cannot say "this is a *new* kind of error I haven't seen" vs "the same error repeating". Our script normalizes each error (strips Task IDs, UUIDs, timestamps, PIDs) and treats each distinct error type independently — alert once per unique error, silently count the rest.
+
+3. **No per-error silencing.** Grafana silences are per alert rule or per label matcher, configured in the UI with a clunky workflow. We needed to mute **one specific noisy error** (e.g. a known `Task was destroyed` warning) in one click, for a custom duration, while still alerting on everything else. Our web UI does this per error group.
+
+4. **No on-demand, reviewable reports.** We wanted to review the day's errors, uncheck the noise, add a comment to each ("known issue, fix in PR #123"), and *then* send a curated summary to Slack. Grafana has no concept of a human-curated report.
+
+5. **Grafana managed contact points are rigid.** Template formatting is limited, the message structure is hard to control, and routing every distinct error to Slack with full context isn't what the notification policy system is built for.
+
+6. **The data source moved.** AIOS production logs migrated from Loki to Azure Monitor for cost reasons. Azure Monitor's `ContainerLogV2` has a real ingestion delay (~60–120 s) that Grafana's alerting does not handle gracefully for "alert on every new error" use cases — it would skip un-ingested logs. Our script explicitly compensates with an ingestion-lag buffer (see below).
+
+In short: Grafana alerting answers *"is a metric over a threshold?"* Our requirement is *"show me the text of each new distinct error as it happens, let me mute the noisy ones, and let me send a curated report"* — which is a log-routing + triage tool, not a threshold alert. This script fills that gap while still using Grafana purely as the **data source** (we query Loki / Azure Monitor through Grafana's datasource proxy, so we reuse its auth and connections).
+
+> Grafana dashboards remain the source of truth for **viewing and exploring** logs. This tool is for **actively routing and triaging** errors into Slack.
+
+
+---
+
 ## Features
 
 - **Real-time error alerts** — each unique error is posted to a Slack channel as it appears.
