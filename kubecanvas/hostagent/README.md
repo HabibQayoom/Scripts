@@ -24,7 +24,8 @@ The installer and agent binaries for connecting a Linux VM to KubeCanvas. The ag
      --insecure-skip-signature-check
    ```
 
-   Add any other flags the Add host screen shows (for example `--command-key` and `--host-id` for managed mode).
+   Easiest: paste the whole command from the Add host screen. On staging it already contains
+   `--insecure-skip-signature-check` and the other flags it needs (for example `--command-key` and `--host-id`).
 
 ## Important: these builds are not signed yet
 
