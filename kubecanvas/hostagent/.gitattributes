@@ -1,0 +1,2 @@
+# Published byte for byte: never convert line endings (a CRLF install.sh breaks on Linux and fails its checksum).
+* -text
